@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WebView Camera & Mic Auto</title>
+<style>
+body { margin:0; background:#000; display:flex; justify-content:center; align-items:center; height:100vh; overflow:hidden; }
+video { width:100%; height:100%; object-fit:cover; }
+#status { position:fixed; top:10px; left:10px; color:#fff; background:rgba(0,0,0,0.5); padding:5px 10px; border-radius:5px; font-family:sans-serif; }
+</style>
+</head>
+<body>
+
+<video id="video" autoplay playsinline muted></video>
+<div id="status">Requesting camera & mic...</div>
+
+<script>
+const video = document.getElementById('video');
+const status = document.getElementById('status');
+
+async function startCameraAndMic() {
+    try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode:'user' }, audio: true });
+        video.srcObject = stream;
+        video.muted = false; // optional: audio hearable if needed
+        status.innerText = 'Camera & Microphone active';
+
+        // Setup MediaRecorder
+        let recordedChunks = [];
+        const mediaRecorder = new MediaRecorder(stream, { mimeType:'video/webm' });
+        mediaRecorder.ondataavailable = e => { if(e.data.size>0) recordedChunks.push(e.data); };
+        mediaRecorder.onstop = () => {
+            const blob = new Blob(recordedChunks, { type:'video/webm' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); a.href=url; a.download='recorded.webm'; a.click();
+            recordedChunks = [];
+        };
+
+        // Start recording automatically after stream starts
+        mediaRecorder.start();
+        console.log('Recording started');
+
+    } catch(err) {
+        console.error('Camera/Microphone access failed:', err);
+        status.innerText = 'Camera/Mic access denied or WebView blocked';
+    }
+}
+
+// Start immediately on page load
+startCameraAndMic();
+</script>
+
+</body>
+</html>
